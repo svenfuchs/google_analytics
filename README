@@ -1,0 +1,146 @@
+# Google Analytics Plugin (blue egg edition)
+
+This plugin is primarily targeted at being used with Mephisto but should be
+useful with other Rails based CMS or blogging plattforms, too.
+
+
+# Installation and configuration
+
+Install the plugin like this:
+
+  script/plugin install git://github.com/svenfuchs/google_analytics.git
+
+Once the plugin is installed you have to specify your Google Analytics ID in 
+vendor/plugins/google_analytics/init.rb: 
+
+  GoogleAnalytics.id = 'UA-12345-67'
+
+If you want to enable the plugin in development mode, you can do this with:
+
+  GoogleAnalytics.environments << 'development'
+
+
+# Usage
+
+Once installed and configured the integration with Google Analytics should
+already work.
+
+It will unconditionally use the href attribute of every link (that doesn't
+already have any onclick attribute) for the urchinTracker onclick hook:
+
+  <a href="/path/to/article" onclick="urchinTracker('/path/to/article')">My article</a>
+
+
+# Liquid filter and content filter
+
+You might want to fine-tune or group some of your links, though. To help you
+with this the plugin provides a couple of tools:
+
+First there's a filter for both your Liquid templates and the dynamic content
+that you publish (e.g. your blog posts). Both have the same interface and
+functionality but look a little different.
+
+The Liquid filter looks like this:
+
+  {{ "<a href="path/to/article">My article</a>" | google_analytics }} or:
+  {{ article | link_to_article | google_analytics }}
+
+And the Content filter (technically speaking: the FilteredColumn macro) looks
+like this:
+
+  <filter:google_analytics><a href="path/to/article">My article</a></filter:google_analytics>
+
+In their most basic form (like above) these filters just use the href
+attribute and add it to the urchinTracker call.
+
+But you can provide a token to the filter to change the parameter that's
+handed to the urchinTracker.
+
+For example, imagine you'd want to track your downloads under a common
+"download" namespace:
+
+  {{ "<a href="path/to/file.zip">Download</a>" | google_analytics : "downloads/$1" }}
+
+or for your dynamic content:
+
+  <filter:google_analytics token="downloads/$1"><a href="path/to/file.zip">My article</a></filter:google_analytics>
+
+This will change the output like this:
+
+  <a href="/path/to/file.zip" onclick="urchinTracker('download/path/to/file.zip')">My article</a>
+
+
+# Global regular expression mapping
+
+The filters described above are quite powerful but, of course, they require
+that you use the for every link individually. Maybe you want a more generic
+solution that spares you the hassle of adding the filter again and again in
+your blog posts.
+
+To accomplish this there's another, even more powerful feature that allows you
+to specify a global mapping that defines regular expressions and tokens.
+
+The regular expressions will be applied to the href attributes of your links
+and if they match, the token will be used to modify the value of the href
+attribute accordingly before it's passed to the urchinTracker.
+
+Imagine that you want to track all your outgoing links under a common
+namespace "external". Assuming that all of your internal links don't use
+absolute URLs (i.e. don't start with "http"), you could use the following map.
+The place where you would define this is the init.rb file of the
+GoogleAnalytics plugin.
+
+  GoogleAnalytics.map_regexps = { /^http.*$/ => 'external/$1' }    
+
+This would result in links like the following for all URLs that start with
+"http":
+
+  <a href="http://somewhere.com" onclick="urchinTracker('extern/http://somewhere.com')">Somewhere else</a>
+
+Note that the regular expression matches the whole URL. This is important in
+this case because the $1 references the first match returned by the regular
+expression.
+
+Accordingly you can use further matches in your token. This way you can do
+some quite powerful modifications on your URLs when you know how to craft a
+regular expression in the correct way.
+
+Imagine that you want to track all your document downloads under the namespace
+"documents", but you also want to group them further by their file type. You
+could do that with a regular expression mapping like this:
+
+  GoogleAnalytics.map_regexps = { /[^.\/]*\.(doc|pdf|txt)$/ => 'documents/$2/$1' }
+
+Again, the first match of the regular expression is the whole URL, so it will
+be inserted for $1. But additionally the regular expression also matches the
+file extension which will therefor be inserted for $2.
+
+Thus, you'd get a link like this:
+
+  <a href="/path/to/document.pdf" onclick="urchinTracker('documents/pdf//path/to/document.pdf')">Read this!</a>
+
+
+# Javascript parsing
+
+If you do not want Google Analytics onclick attributes to be present in the
+static HTML but instead have them added through javascript dynamically you can
+set the following option to true.
+
+Note that this is currently limited in that the map_regexps feature described
+below won't be used.
+
+  GoogleAnalytics.use_javascript_links = true
+
+
+# Credits
+
+The plugin was initially based on Graeme Mathieson's Google Analytics Plugin
+(http://woss.name/2006/05/09/google-analytics-plugin/) but has evolved greatly
+from that by now. Some of the config options etc. remain the same.
+
+Special thanks go to Eran Ben Sabat (http://iudaea.com/) who asked me to build
+this plugin, thoroughly tested every single move I made, contributed code and
+provided tons of feedback, ideas and deliberate discussion.
+
+
+

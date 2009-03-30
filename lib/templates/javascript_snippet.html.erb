@@ -1,0 +1,18 @@
+<script src="<%= url %>" type="text/javascript"></script>
+<script type="text/javascript">
+  _uacct = "<%= id %>";
+	<% unless domain_name.nil? %>
+	_udn = "<%= domain_name %>"
+	<% end %>
+	<% if self.use_javascript_links %>
+  function google_analytics_links() {
+    $$('a').each(function(el) {
+      if(!el.getAttribute('onclick')) {
+        el.setAttribute('onclick', "urchinTracker('" + el.href + "');");
+      }
+    })
+  }   
+  Event.observe(window, 'load', google_analytics_links, false);   	
+	<% end %>
+  urchinTracker();
+</script>
